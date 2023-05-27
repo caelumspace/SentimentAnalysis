@@ -1,6 +1,7 @@
 import tweepy
 from textblob import TextBlob
 import re
+import json
 
 class TwitterClient(object):
     def __init__(self):
@@ -33,13 +34,19 @@ class TwitterClient(object):
         tweets = []
         
         try:
-            fetched_tweets = self.api.search(q=query, count=count)
+            fetched_tweets = self.api.search(q=query, count=count, lang="en", tweet_mode='extended')
             
             for tweet in fetched_tweets:
                 parsed_tweet = {}
-                
-                parsed_tweet['text'] = tweet.text
-                parsed_tweet['sentiment'] = self.get_tweet_sentiment(tweet.text)
+                if 'retweeted_status' in tweet._json:
+                    parsed_tweet['text'] = tweet.retweeted_status.full_text
+                else:
+                    parsed_tweet['text'] = tweet.full_text
+                parsed_tweet['sentiment'] = self.get_tweet_sentiment(tweet.full_text)
+                if tweet.geo:
+                    parsed_tweet['location'] = tweet.geo
+                elif tweet.user.location:
+                    parsed_tweet['location'] = tweet.user.location
                 
                 if tweet.retweet_count > 0:
                     if parsed_tweet not in tweets:
@@ -54,18 +61,19 @@ class TwitterClient(object):
             
 def main():
     api = TwitterClient()
-    disaster_keywords = ['earthquake', 'flood', 'hurricane', 'wildfire', 'tsunami']
-    
+    disaster_keywords = ['earthquake', 'flood', 'hurricane', 'wildfire', 'tsunami', 
+                         'tornado', 'avalanche', 'landslide', 'drought', 'storm', 'volcano', 
+                         'blizzard', 'cyclone', 'typhoon']
+
+    all_disaster_tweets = []
     for keyword in disaster_keywords:
         tweets = api.get_tweets(query=keyword, count=200)
-        ptweets = [tweet for tweet in tweets if tweet['sentiment'] == 'positive']
-        print("Positive tweets percentage: {} %".format(100*len(ptweets)/len(tweets)))
-        
-        ntweets = [tweet for tweet in tweets if tweet['sentiment'] == 'negative']
-        print("Negative tweets percentage: {} %".format(100*len(ntweets)/len(tweets)))
-        
-        print("Neutral tweets percentage: {} %".format(100*(len(tweets) -(len( ntweets )+len( ptweets)))/len(tweets)))
-        print("\n\n")
+        all_disaster_tweets.extend(tweets)
+
+    all_disaster_tweets.sort(key=lambda x: x.get('location', None))
+
+    with open('disaster_tweets.json', 'w') as f:
+        json.dump(all_disaster_tweets, f)
 
 if __name__ == "__main__":
     main()
