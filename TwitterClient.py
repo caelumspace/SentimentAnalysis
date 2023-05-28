@@ -1,14 +1,18 @@
 import tweepy
 from textblob import TextBlob
+from dotenv import load_dotenv
 import re
 import json
+import os
+
+load_dotenv()
 
 class TwitterClient(object):
     def __init__(self):
-        consumer_key = 'YourTwitterAPIKey'
-        consumer_secret = 'YourTwitterAPISecretKey'
-        access_token = 'YourTwitterAccessToken'
-        access_token_secret = 'YourTwitterAccessTokenSecret'
+        consumer_key = os.getenv('TWITTER_API')
+        consumer_secret = os.getenv('TWITTER_API_SECTRET')
+        access_token = os.getenv('TWITTER_ACCESS_TOKEN')
+        access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
         
         try:
             self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -34,7 +38,7 @@ class TwitterClient(object):
         tweets = []
         
         try:
-            fetched_tweets = self.api.search(q=query, count=count, lang="en", tweet_mode='extended')
+            fetched_tweets = self.api.search_tweets(q=query, count=count, lang="en", tweet_mode='extended')
             
             for tweet in fetched_tweets:
                 parsed_tweet = {}
@@ -56,7 +60,7 @@ class TwitterClient(object):
             
             return tweets
         
-        except tweepy.TweepError as e:
+        except AttributeError as e:
             print("Error : " + str(e))
             
 def main():
